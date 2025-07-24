@@ -30,7 +30,7 @@ export default function ImageProcessor({
       formData.append("file", originalImage)
 
       setProcessingStep("AI processing background...")
-      const apiRes = await fetch("http://localhost:8000/segment", {
+      const apiRes = await fetch("https://backgroundremover-pld3.onrender.com/segment", {
         method: "POST",
         body: formData,
       })
