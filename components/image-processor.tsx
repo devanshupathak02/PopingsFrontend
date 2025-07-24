@@ -32,14 +32,10 @@ export default function ImageProcessor({
 
       setProcessingStep("AI processing background...")
       
-      // Fixed API URL with proper protocol
-      const apiRes = await fetch("https://backgroundremover-production-72c6.up.railway.app", {
+      // Correct endpoint based on your FastAPI backend
+      const apiRes = await fetch("https://backgroundremover-production-72c6.up.railway.app/segment", {
         method: "POST",
         body: formData,
-        // Add headers if needed
-        headers: {
-          // Don't set Content-Type for FormData - browser will set it automatically with boundary
-        },
       })
       
       if (!apiRes.ok) {
