@@ -33,7 +33,7 @@ export default function ImageProcessor({
       setProcessingStep("AI processing background...")
       
       // Fixed API URL with proper protocol
-      const apiRes = await fetch("https://backgroundremover-production-72c6.up.railway.app/api/remove-background", {
+      const apiRes = await fetch("https://backgroundremover-production-72c6.up.railway.app", {
         method: "POST",
         body: formData,
         // Add headers if needed
