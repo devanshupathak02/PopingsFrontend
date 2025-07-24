@@ -24,24 +24,49 @@ export default function ImageProcessor({
     if (!originalImage) return;
     setIsProcessing(true)
     setProcessingStep("")
+    
     try {
       setProcessingStep("Uploading image to AI backend...")
       const formData = new FormData()
       formData.append("file", originalImage)
 
       setProcessingStep("AI processing background...")
-      const apiRes = await fetch("backgroundremover-production-72c6.up.railway.app", {
+      
+      // Fixed API URL with proper protocol
+      const apiRes = await fetch("https://backgroundremover-production-72c6.up.railway.app/api/remove-background", {
         method: "POST",
         body: formData,
+        // Add headers if needed
+        headers: {
+          // Don't set Content-Type for FormData - browser will set it automatically with boundary
+        },
       })
-      if (!apiRes.ok) throw new Error("Segmentation failed")
+      
+      if (!apiRes.ok) {
+        const errorText = await apiRes.text()
+        throw new Error(`API Error (${apiRes.status}): ${errorText || 'Segmentation failed'}`)
+      }
+      
       setProcessingStep("Downloading result...")
       const resultBlob = await apiRes.blob()
+      
+      // Check if the blob is actually an image
+      if (!resultBlob.type.startsWith('image/')) {
+        throw new Error('Invalid response format - expected image')
+      }
+      
       const resultUrl = URL.createObjectURL(resultBlob)
       onProcessedImage(resultUrl)
       setProcessingStep("")
+      
     } catch (err: any) {
+      console.error('Processing error:', err)
       setProcessingStep("Error: " + (err.message || "Unknown error"))
+      
+      // Clear error after 5 seconds
+      setTimeout(() => {
+        setProcessingStep("")
+      }, 5000)
     } finally {
       setIsProcessing(false)
     }
@@ -51,9 +76,11 @@ export default function ImageProcessor({
     if (!processedImage) return
 
     const link = document.createElement("a")
-    link.download = "popping-background-removed.png"
+    link.download = "background-removed.png"
     link.href = processedImage
+    document.body.appendChild(link) // Ensure link is in DOM
     link.click()
+    document.body.removeChild(link) // Clean up
   }, [processedImage])
 
   return (
@@ -75,11 +102,17 @@ export default function ImageProcessor({
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
             <div className="relative bg-gray-900/50 border border-gray-700 rounded-2xl overflow-hidden backdrop-blur-sm">
-              <img
-                src={originalImage ? URL.createObjectURL(originalImage as File) : "/placeholder.svg"}
-                alt="Original"
-                className="w-full h-auto max-h-80 md:max-h-96 object-contain"
-              />
+              {originalImage ? (
+                <img
+                  src={URL.createObjectURL(originalImage)}
+                  alt="Original"
+                  className="w-full h-auto max-h-80 md:max-h-96 object-contain"
+                />
+              ) : (
+                <div className="w-full h-80 md:h-96 flex items-center justify-center text-gray-500">
+                  No image selected
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -105,7 +138,7 @@ export default function ImageProcessor({
                 </div>
               ) : processedImage ? (
                 <img
-                  src={processedImage || "/placeholder.svg"}
+                  src={processedImage}
                   alt="Processed"
                   className="w-full h-auto max-h-80 md:max-h-96 object-contain"
                 />
@@ -124,7 +157,7 @@ export default function ImageProcessor({
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-        {!processedImage && !isProcessing && (
+        {!processedImage && !isProcessing && originalImage && (
           <Button
             onClick={processImage}
             size="lg"
@@ -165,6 +198,15 @@ export default function ImageProcessor({
           <div className="inline-flex items-center space-x-2 bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-2">
             <CheckCircle className="w-5 h-5 text-green-500" />
             <span className="text-green-400 font-medium">Background removed successfully!</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {processingStep.startsWith("Error:") && (
+        <div className="text-center">
+          <div className="inline-flex items-center space-x-2 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-2">
+            <span className="text-red-400 font-medium">{processingStep}</span>
           </div>
         </div>
       )}
